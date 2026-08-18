@@ -13,7 +13,7 @@ import {
   type Input,
 } from "@/lib/game/engine";
 
-type Role = "host" | "guest";
+type Role = "host" | "guest" | "solo";
 
 const KEYS: Record<string, keyof Input> = {
   ArrowLeft: "left",
