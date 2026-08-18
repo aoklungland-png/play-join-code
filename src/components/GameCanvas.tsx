@@ -246,7 +246,7 @@ export function GameCanvas({
       </div>
 
       <p className="mt-3 text-center text-xs uppercase tracking-[0.2em] text-muted-foreground">
-        Move A/D · Jump W · Attack J · Special K
+        Move A/D · Jump W · Attack J · Special K{role === "solo" ? " · Reset R" : ""}
       </p>
     </div>
   );
