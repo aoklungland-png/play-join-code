@@ -102,6 +102,40 @@ export function GameCanvas({
 
   useEffect(() => {
     stateRef.current = createGame(hostChar, guestChar);
+    const solo = role === "solo";
+
+    if (solo) {
+      const reset = (e: KeyboardEvent) => {
+        if (e.code === "KeyR") stateRef.current = createGame(hostChar, guestChar);
+      };
+      window.addEventListener("keydown", reset);
+      let raf = 0;
+      let last = performance.now();
+      let acc = 0;
+      const ctx = canvasRef.current?.getContext("2d") ?? null;
+      const loop = (now: number) => {
+        acc += Math.min(now - last, 100);
+        last = now;
+        while (acc >= 1000 / 60) {
+          acc -= 1000 / 60;
+          step(stateRef.current, [inputRef.current, { ...EMPTY_INPUT }]);
+        }
+        const s = stateRef.current;
+        if (ctx) draw(ctx, s);
+        setHud((prev) =>
+          prev.hp0 === s.players[0].hp && prev.hp1 === s.players[1].hp && prev.winner === s.winner
+            ? prev
+            : { hp0: s.players[0].hp, hp1: s.players[1].hp, winner: s.winner },
+        );
+        raf = requestAnimationFrame(loop);
+      };
+      raf = requestAnimationFrame(loop);
+      return () => {
+        cancelAnimationFrame(raf);
+        window.removeEventListener("keydown", reset);
+      };
+    }
+
     const channel = supabase.channel(`match-${code}`, {
       config: { broadcast: { self: false } },
     });
