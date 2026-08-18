@@ -197,7 +197,7 @@ export function GameCanvas({
     };
   }, [code, role, hostChar, guestChar]);
 
-  const you = role === "host" ? 0 : 1;
+  const you = role === "guest" ? 1 : 0;
   const chars: CharacterId[] = [hostChar, guestChar];
 
   return (
