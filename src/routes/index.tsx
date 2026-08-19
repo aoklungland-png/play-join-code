@@ -109,9 +109,14 @@ function Home() {
                 >
                   <div className="flex items-center gap-3">
                     <span
-                      className="h-10 w-8 rounded-sm"
-                      style={{ background: c.color, boxShadow: `0 0 24px ${c.color}66` }}
-                    />
+                      className="flex h-10 w-8 flex-col overflow-hidden rounded-sm"
+                      style={{ boxShadow: `0 0 24px ${c.color}66` }}
+                    >
+                      <span className="h-1/4" style={{ background: c.look.hair }} />
+                      <span className="h-1/4" style={{ background: c.look.skin }} />
+                      <span className="h-1/4" style={{ background: c.look.shirt }} />
+                      <span className="h-1/4" style={{ background: c.look.pants }} />
+                    </span>
                     <span className="font-display text-2xl tracking-wide text-foreground">{c.name}</span>
                   </div>
                   <p className="mt-3 text-sm text-muted-foreground">{c.tagline}</p>
