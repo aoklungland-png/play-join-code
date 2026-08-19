@@ -28,6 +28,84 @@ const KEYS: Record<string, keyof Input> = {
   ShiftLeft: "special",
 };
 
+function drawHuman(
+  ctx: CanvasRenderingContext2D,
+  p: GameState["players"][number],
+  tick: number,
+) {
+  const c = CHARACTERS[p.character];
+  const look = c.look;
+  const h = PLAYER_H * look.height;
+  const w = PLAYER_W * look.build;
+  const baseX = p.x + PLAYER_W / 2;
+  const baseY = p.y + PLAYER_H; // feet
+  const headR = w * 0.28;
+  const torsoH = h * 0.36;
+  const legH = h * 0.34;
+  const neckY = baseY - legH - torsoH;
+  const jiggle = p.auraTimer > 0 ? Math.sin(tick * 0.6) * 3 : 0;
+
+  const walk = Math.abs(p.vx) > 0.4 ? Math.sin(tick * 0.35) : 0;
+
+  // legs
+  ctx.strokeStyle = look.pants;
+  ctx.lineWidth = w * 0.24;
+  ctx.lineCap = "round";
+  for (const side of [-1, 1]) {
+    ctx.beginPath();
+    ctx.moveTo(baseX + jiggle * 0.4, baseY - legH);
+    ctx.lineTo(baseX + side * (w * 0.18) + walk * side * 6 + jiggle * 0.4, baseY);
+    ctx.stroke();
+  }
+
+  // torso
+  ctx.fillStyle = look.shirt;
+  ctx.beginPath();
+  ctx.roundRect(
+    baseX - w * 0.3 + jiggle,
+    neckY,
+    w * 0.6,
+    torsoH,
+    w * 0.18,
+  );
+  ctx.fill();
+
+  // arms
+  ctx.strokeStyle = look.skin;
+  ctx.lineWidth = w * 0.18;
+  const punching = p.attackTimer > 0;
+  for (const side of [-1, 1]) {
+    const shoulderX = baseX + side * w * 0.3 + jiggle;
+    const shoulderY = neckY + torsoH * 0.18;
+    ctx.beginPath();
+    ctx.moveTo(shoulderX, shoulderY);
+    if (punching && side === p.facing) {
+      ctx.lineTo(shoulderX + p.facing * c.melee.range * 0.55, shoulderY + 2);
+    } else {
+      ctx.lineTo(shoulderX + side * w * 0.16 - walk * side * 5, shoulderY + torsoH * 0.75);
+    }
+    ctx.stroke();
+  }
+
+  // head + hair
+  const headY = neckY - headR - 2;
+  ctx.fillStyle = look.skin;
+  ctx.beginPath();
+  ctx.arc(baseX + jiggle, headY, headR, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = look.hair;
+  ctx.beginPath();
+  ctx.arc(baseX + jiggle, headY - headR * 0.18, headR, Math.PI, Math.PI * 2);
+  ctx.fill();
+
+  // eye
+  ctx.fillStyle = "#1a1a22";
+  ctx.beginPath();
+  ctx.arc(baseX + jiggle + p.facing * headR * 0.4, headY + headR * 0.1, 1.8, 0, Math.PI * 2);
+  ctx.fill();
+}
+
 function draw(ctx: CanvasRenderingContext2D, state: GameState) {
   ctx.clearRect(0, 0, WORLD.width, WORLD.height);
 
@@ -42,23 +120,40 @@ function draw(ctx: CanvasRenderingContext2D, state: GameState) {
   ctx.fillStyle = "rgba(255,255,255,0.22)";
   for (const p of PLATFORMS) ctx.fillRect(p.x, p.y, p.w, 3);
 
+  // poison auras (behind fighters)
+  state.players.forEach((p) => {
+    if (p.auraTimer <= 0) return;
+    const c = CHARACTERS[p.character];
+    const cx = p.x + PLAYER_W / 2;
+    const cy = p.y + PLAYER_H / 2;
+    const r = c.special.radius * (0.9 + Math.sin(state.tick * 0.2) * 0.06);
+    const g = ctx.createRadialGradient(cx, cy, 8, cx, cy, r);
+    g.addColorStop(0, "rgba(140,240,120,0.35)");
+    g.addColorStop(1, "rgba(80,200,90,0)");
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
   for (const pr of state.projectiles) {
-    ctx.fillStyle = "#9be7ff";
-    ctx.fillRect(pr.x, pr.y, 14, 10);
+    ctx.fillStyle = "#ffd06b";
+    ctx.beginPath();
+    ctx.arc(pr.x + 8, pr.y + 8, 8, 0, Math.PI * 2);
+    ctx.fill();
   }
 
   state.players.forEach((p) => {
-    const c = CHARACTERS[p.character];
     ctx.globalAlpha = p.hurtTimer > 0 && p.hurtTimer % 6 < 3 ? 0.45 : 1;
-    ctx.fillStyle = c.color;
-    ctx.fillRect(p.x, p.y, PLAYER_W, PLAYER_H);
-    ctx.fillStyle = c.accent;
-    ctx.fillRect(p.x + (p.facing === 1 ? PLAYER_W - 10 : 2), p.y + 10, 8, 8);
-    if (p.attackTimer > 0) {
-      ctx.fillStyle = "rgba(255,255,255,0.7)";
-      const hx = p.facing === 1 ? p.x + PLAYER_W : p.x - c.melee.range;
-      ctx.fillRect(hx, p.y + 14, c.melee.range, 16);
+    if (p.dashTimer > 0) {
+      ctx.globalAlpha *= 0.5;
+      ctx.save();
+      ctx.translate(-p.facing * 16, 0);
+      drawHuman(ctx, p, state.tick);
+      ctx.restore();
+      ctx.globalAlpha = 1;
     }
+    drawHuman(ctx, p, state.tick);
     ctx.globalAlpha = 1;
   });
 }

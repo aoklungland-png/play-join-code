@@ -31,7 +31,7 @@ function makeCode() {
 
 function Home() {
   const navigate = useNavigate();
-  const [character, setCharacter] = useState<CharacterId>("blaze");
+  const [character, setCharacter] = useState<CharacterId>("jiggly");
   const [joinCode, setJoinCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -93,7 +93,7 @@ function Home() {
 
         <section className="mt-12">
           <h2 className="mb-4 font-display text-2xl tracking-wide text-foreground">Choose fighter</h2>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-3">
             {CHARACTER_LIST.map((c) => {
               const active = c.id === character;
               return (
@@ -109,9 +109,14 @@ function Home() {
                 >
                   <div className="flex items-center gap-3">
                     <span
-                      className="h-10 w-8 rounded-sm"
-                      style={{ background: c.color, boxShadow: `0 0 24px ${c.color}66` }}
-                    />
+                      className="flex h-10 w-8 flex-col overflow-hidden rounded-sm"
+                      style={{ boxShadow: `0 0 24px ${c.color}66` }}
+                    >
+                      <span className="h-1/4" style={{ background: c.look.hair }} />
+                      <span className="h-1/4" style={{ background: c.look.skin }} />
+                      <span className="h-1/4" style={{ background: c.look.shirt }} />
+                      <span className="h-1/4" style={{ background: c.look.pants }} />
+                    </span>
                     <span className="font-display text-2xl tracking-wide text-foreground">{c.name}</span>
                   </div>
                   <p className="mt-3 text-sm text-muted-foreground">{c.tagline}</p>

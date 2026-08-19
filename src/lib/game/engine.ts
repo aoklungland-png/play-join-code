@@ -32,6 +32,7 @@ export interface PlayerState {
   attackCd: number;
   specialCd: number;
   dashTimer: number;
+  auraTimer: number;
   hurtTimer: number;
 }
 
@@ -75,6 +76,7 @@ function makePlayer(character: CharacterId, x: number, facing: 1 | -1): PlayerSt
     attackCd: 0,
     specialCd: 0,
     dashTimer: 0,
+    auraTimer: 0,
     hurtTimer: 0,
   };
 }
@@ -98,6 +100,7 @@ function stepPlayer(p: PlayerState, input: Input) {
   if (p.specialCd > 0) p.specialCd--;
   if (p.attackTimer > 0) p.attackTimer--;
   if (p.hurtTimer > 0) p.hurtTimer--;
+  if (p.auraTimer > 0) p.auraTimer--;
 
   if (p.dashTimer > 0) {
     p.dashTimer--;
@@ -145,6 +148,11 @@ function damage(target: PlayerState, amount: number, fromX: number) {
   target.vy = -5;
 }
 
+/** Damage over time (poison) — ignores invulnerability and applies no knockback. */
+function poisonTick(target: PlayerState, amount: number) {
+  target.hp = Math.max(0, target.hp - amount);
+}
+
 export function step(state: GameState, inputs: [Input, Input]): GameState {
   if (state.winner !== null) return state;
   state.tick++;
@@ -168,24 +176,39 @@ export function step(state: GameState, inputs: [Input, Input]): GameState {
 
     if (input.special && p.specialCd === 0) {
       p.specialCd = c.special.cooldown;
-      if (c.special.projectile) {
-        state.projectiles.push({
-          owner: i as 0 | 1,
-          x: p.x + (p.facing === 1 ? PLAYER_W : -12),
-          y: p.y + 20,
-          vx: p.facing * c.special.speed,
-          damage: c.special.damage,
-          life: 110,
-        });
+      if (c.special.kind === "aura") {
+        p.auraTimer = c.special.duration;
+      } else if (c.special.kind === "slam") {
+        p.vy = 6;
+        for (const dir of [1, -1] as const) {
+          state.projectiles.push({
+            owner: i as 0 | 1,
+            x: p.x + (dir === 1 ? PLAYER_W : -14),
+            y: p.y + PLAYER_H - 16,
+            vx: dir * c.special.speed,
+            damage: c.special.damage,
+            life: 70,
+          });
+        }
       } else {
-        p.dashTimer = 12;
-        p.vy = -3;
+        p.dashTimer = c.special.duration;
+        p.vy = -2;
+      }
+    }
+
+    // Poison aura ticks damage on anyone standing close by
+    if (p.auraTimer > 0 && state.tick % 12 === 0) {
+      const cx = p.x + PLAYER_W / 2;
+      const cy = p.y + PLAYER_H / 2;
+      const ox = other.x + PLAYER_W / 2;
+      const oy = other.y + PLAYER_H / 2;
+      if (Math.hypot(cx - ox, cy - oy) < c.special.radius) {
+        poisonTick(other, c.special.damage);
       }
     }
 
     if (p.dashTimer > 0 && overlaps(p.x, p.y, PLAYER_W, PLAYER_H, other.x, other.y, PLAYER_W, PLAYER_H)) {
       damage(other, c.special.damage, p.x);
-      p.dashTimer = 0;
     }
   }
 
@@ -193,7 +216,7 @@ export function step(state: GameState, inputs: [Input, Input]): GameState {
     pr.x += pr.vx;
     pr.life--;
     const target = state.players[1 - pr.owner]!;
-    if (overlaps(pr.x, pr.y, 14, 10, target.x, target.y, PLAYER_W, PLAYER_H)) {
+    if (overlaps(pr.x, pr.y, 16, 16, target.x, target.y, PLAYER_W, PLAYER_H)) {
       damage(target, pr.damage, pr.x);
       return false;
     }
