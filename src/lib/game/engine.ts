@@ -1,6 +1,6 @@
 import { CHARACTERS, type CharacterId } from "./characters";
 
-export const WORLD = { width: 960, height: 540 };
+export const WORLD = { width: 1200, height: 640 };
 export const GRAVITY = 0.6;
 
 export interface Input {
@@ -34,6 +34,10 @@ export interface PlayerState {
   dashTimer: number;
   auraTimer: number;
   hurtTimer: number;
+  /** Cough wind-up/recovery animation timer (JJ) */
+  coughTimer: number;
+  /** Blink flash timer */
+  blinkTimer: number;
 }
 
 export interface Projectile {
@@ -41,8 +45,10 @@ export interface Projectile {
   x: number;
   y: number;
   vx: number;
+  vy: number;
   damage: number;
   life: number;
+  kind: "acid" | "shock";
 }
 
 export interface GameState {
@@ -52,12 +58,45 @@ export interface GameState {
   tick: number;
 }
 
-export const PLATFORMS = [
-  { x: 0, y: 470, w: WORLD.width, h: 70 },
-  { x: 120, y: 350, w: 200, h: 18 },
-  { x: 640, y: 350, w: 200, h: 18 },
-  { x: 380, y: 230, w: 200, h: 18 },
+export type PlatformKind = "solid" | "bounce" | "hazard";
+
+export interface Platform {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  kind: PlatformKind;
+  /** Horizontal patrol movement */
+  move?: { range: number; speed: number; phase: number };
+}
+
+export const PLATFORMS: Platform[] = [
+  // main ground
+  { x: 0, y: 570, w: WORLD.width, h: 70, kind: "solid" },
+  // acid pools burned into the floor
+  { x: 300, y: 558, w: 110, h: 12, kind: "hazard" },
+  { x: 790, y: 558, w: 110, h: 12, kind: "hazard" },
+  // bounce pads
+  { x: 520, y: 546, w: 70, h: 24, kind: "bounce" },
+  { x: 610, y: 546, w: 70, h: 24, kind: "bounce" },
+  // side ledges
+  { x: 70, y: 430, w: 230, h: 18, kind: "solid" },
+  { x: 900, y: 430, w: 230, h: 18, kind: "solid" },
+  // mid platforms
+  { x: 330, y: 350, w: 180, h: 18, kind: "solid" },
+  { x: 690, y: 350, w: 180, h: 18, kind: "solid" },
+  // moving elevator platforms
+  { x: 160, y: 250, w: 150, h: 16, kind: "solid", move: { range: 260, speed: 0.011, phase: 0 } },
+  { x: 890, y: 250, w: 150, h: 16, kind: "solid", move: { range: 260, speed: 0.011, phase: Math.PI } },
+  // top perch
+  { x: 500, y: 180, w: 200, h: 18, kind: "solid" },
 ];
+
+/** Platform X offset at a given tick (moving platforms patrol horizontally). */
+export function platformX(p: Platform, tick: number) {
+  if (!p.move) return p.x;
+  return p.x + (Math.sin(tick * p.move.speed + p.move.phase) * p.move.range) / 2;
+}
 
 export const PLAYER_W = 34;
 export const PLAYER_H = 54;
@@ -78,12 +117,14 @@ function makePlayer(character: CharacterId, x: number, facing: 1 | -1): PlayerSt
     dashTimer: 0,
     auraTimer: 0,
     hurtTimer: 0,
+    coughTimer: 0,
+    blinkTimer: 0,
   };
 }
 
 export function createGame(hostChar: CharacterId, guestChar: CharacterId): GameState {
   return {
-    players: [makePlayer(hostChar, 180, 1), makePlayer(guestChar, 740, -1)],
+    players: [makePlayer(hostChar, 200, 1), makePlayer(guestChar, WORLD.width - 240, -1)],
     projectiles: [],
     winner: null,
     tick: 0,
@@ -94,13 +135,15 @@ function overlaps(ax: number, ay: number, aw: number, ah: number, bx: number, by
   return ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by;
 }
 
-function stepPlayer(p: PlayerState, input: Input) {
+function stepPlayer(p: PlayerState, input: Input, tick: number) {
   const c = CHARACTERS[p.character];
   if (p.attackCd > 0) p.attackCd--;
   if (p.specialCd > 0) p.specialCd--;
   if (p.attackTimer > 0) p.attackTimer--;
   if (p.hurtTimer > 0) p.hurtTimer--;
   if (p.auraTimer > 0) p.auraTimer--;
+  if (p.coughTimer > 0) p.coughTimer--;
+  if (p.blinkTimer > 0) p.blinkTimer--;
 
   if (p.dashTimer > 0) {
     p.dashTimer--;
@@ -124,14 +167,27 @@ function stepPlayer(p: PlayerState, input: Input) {
 
   p.onGround = false;
   for (const plat of PLATFORMS) {
+    const px = platformX(plat, tick);
     if (
       p.vy >= 0 &&
-      overlaps(p.x, p.y, PLAYER_W, PLAYER_H, plat.x, plat.y, plat.w, plat.h) &&
-      p.y + PLAYER_H - p.vy <= plat.y + 4
+      overlaps(p.x, p.y, PLAYER_W, PLAYER_H, px, plat.y, plat.w, plat.h) &&
+      p.y + PLAYER_H - p.vy <= plat.y + 6
     ) {
       p.y = plat.y - PLAYER_H;
-      p.vy = 0;
       p.onGround = true;
+      if (plat.kind === "bounce") {
+        p.vy = -Math.max(20, c.jump * 1.35);
+        p.onGround = false;
+      } else {
+        p.vy = 0;
+      }
+      if (plat.move) {
+        // carry the player with the moving platform
+        p.x += platformX(plat, tick) - platformX(plat, tick - 1);
+      }
+      if (plat.kind === "hazard" && tick % 18 === 0) {
+        p.hp = Math.max(0, p.hp - 3);
+      }
     }
   }
 
@@ -163,14 +219,28 @@ export function step(state: GameState, inputs: [Input, Input]): GameState {
     const other = state.players[1 - i]!;
     const c = CHARACTERS[p.character];
 
-    stepPlayer(p, input);
+    stepPlayer(p, input, state.tick);
 
     if (input.attack && p.attackCd === 0) {
       p.attackCd = c.melee.cooldown;
       p.attackTimer = 10;
-      const hx = p.facing === 1 ? p.x + PLAYER_W : p.x - c.melee.range;
-      if (overlaps(hx, p.y, c.melee.range, PLAYER_H, other.x, other.y, PLAYER_W, PLAYER_H)) {
-        damage(other, c.melee.damage, p.x);
+      if (c.melee.projectile) {
+        p.coughTimer = 22;
+        state.projectiles.push({
+          owner: i as 0 | 1,
+          x: p.x + (p.facing === 1 ? PLAYER_W : -16),
+          y: p.y + 14,
+          vx: p.facing * c.melee.projectile.speed,
+          vy: 0,
+          damage: c.melee.damage,
+          life: c.melee.projectile.life,
+          kind: "acid",
+        });
+      } else {
+        const hx = p.facing === 1 ? p.x + PLAYER_W : p.x - c.melee.range;
+        if (overlaps(hx, p.y, c.melee.range, PLAYER_H, other.x, other.y, PLAYER_W, PLAYER_H)) {
+          damage(other, c.melee.damage, p.x);
+        }
       }
     }
 
@@ -186,10 +256,16 @@ export function step(state: GameState, inputs: [Input, Input]): GameState {
             x: p.x + (dir === 1 ? PLAYER_W : -14),
             y: p.y + PLAYER_H - 16,
             vx: dir * c.special.speed,
+            vy: 0,
             damage: c.special.damage,
             life: 70,
+            kind: "shock",
           });
         }
+      } else if (c.special.kind === "blink") {
+        const dist = c.special.distance ?? 150;
+        p.x = Math.max(0, Math.min(WORLD.width - PLAYER_W, p.x + p.facing * dist));
+        p.blinkTimer = 14;
       } else {
         p.dashTimer = c.special.duration;
         p.vy = -2;
@@ -214,13 +290,15 @@ export function step(state: GameState, inputs: [Input, Input]): GameState {
 
   state.projectiles = state.projectiles.filter((pr) => {
     pr.x += pr.vx;
+    pr.y += pr.vy;
+    if (pr.kind === "acid") pr.vy = Math.min(pr.vy + 0.12, 6);
     pr.life--;
     const target = state.players[1 - pr.owner]!;
     if (overlaps(pr.x, pr.y, 16, 16, target.x, target.y, PLAYER_W, PLAYER_H)) {
       damage(target, pr.damage, pr.x);
       return false;
     }
-    return pr.life > 0 && pr.x > -40 && pr.x < WORLD.width + 40;
+    return pr.life > 0 && pr.x > -40 && pr.x < WORLD.width + 40 && pr.y < WORLD.height + 40;
   });
 
   if (state.players[0].hp <= 0) state.winner = 1;
