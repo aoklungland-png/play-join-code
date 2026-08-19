@@ -31,7 +31,7 @@ function makeCode() {
 
 function Home() {
   const navigate = useNavigate();
-  const [character, setCharacter] = useState<CharacterId>("blaze");
+  const [character, setCharacter] = useState<CharacterId>("jiggly");
   const [joinCode, setJoinCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
