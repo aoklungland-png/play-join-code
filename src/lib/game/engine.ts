@@ -2,6 +2,9 @@ import { CHARACTERS, type CharacterId } from "./characters";
 
 export const WORLD = { width: 1200, height: 640 };
 export const GRAVITY = 0.6;
+/** Ticks the death animation plays before the match resolves. */
+export const DEATH_DURATION = 80;
+
 
 export interface Input {
   left: boolean;
@@ -38,7 +41,10 @@ export interface PlayerState {
   coughTimer: number;
   /** Blink flash timer */
   blinkTimer: number;
+  /** Counts up while the death animation plays (0 = alive) */
+  deathTimer: number;
 }
+
 
 export interface Projectile {
   owner: 0 | 1;
@@ -72,25 +78,25 @@ export interface Platform {
 
 export const PLATFORMS: Platform[] = [
   // main ground
-  { x: 0, y: 570, w: WORLD.width, h: 70, kind: "solid" },
-  // acid pools burned into the floor
-  { x: 300, y: 558, w: 110, h: 12, kind: "hazard" },
-  { x: 790, y: 558, w: 110, h: 12, kind: "hazard" },
+  { x: 0, y: 600, w: WORLD.width, h: 40, kind: "solid" },
+  // acid pits burned into both ends of the floor
+  { x: 40, y: 588, w: 150, h: 14, kind: "hazard" },
+  { x: 1010, y: 588, w: 150, h: 14, kind: "hazard" },
   // bounce pads
-  { x: 520, y: 546, w: 70, h: 24, kind: "bounce" },
-  { x: 610, y: 546, w: 70, h: 24, kind: "bounce" },
-  // side ledges
-  { x: 70, y: 430, w: 230, h: 18, kind: "solid" },
-  { x: 900, y: 430, w: 230, h: 18, kind: "solid" },
-  // mid platforms
-  { x: 330, y: 350, w: 180, h: 18, kind: "solid" },
-  { x: 690, y: 350, w: 180, h: 18, kind: "solid" },
-  // moving elevator platforms
-  { x: 160, y: 250, w: 150, h: 16, kind: "solid", move: { range: 260, speed: 0.011, phase: 0 } },
-  { x: 890, y: 250, w: 150, h: 16, kind: "solid", move: { range: 260, speed: 0.011, phase: Math.PI } },
+  { x: 300, y: 574, w: 84, h: 26, kind: "bounce" },
+  { x: 816, y: 574, w: 84, h: 26, kind: "bounce" },
+  // central raised arena
+  { x: 460, y: 470, w: 280, h: 20, kind: "solid" },
+  // floating side islands
+  { x: 90, y: 340, w: 210, h: 18, kind: "solid" },
+  { x: 900, y: 340, w: 210, h: 18, kind: "solid" },
+  // moving lifts
+  { x: 320, y: 250, w: 140, h: 16, kind: "solid", move: { range: 210, speed: 0.012, phase: 0 } },
+  { x: 740, y: 250, w: 140, h: 16, kind: "solid", move: { range: 210, speed: 0.012, phase: Math.PI } },
   // top perch
-  { x: 500, y: 180, w: 200, h: 18, kind: "solid" },
+  { x: 520, y: 150, w: 170, h: 18, kind: "solid" },
 ];
+
 
 /** Platform X offset at a given tick (moving platforms patrol horizontally). */
 export function platformX(p: Platform, tick: number) {
@@ -119,6 +125,8 @@ function makePlayer(character: CharacterId, x: number, facing: 1 | -1): PlayerSt
     hurtTimer: 0,
     coughTimer: 0,
     blinkTimer: 0,
+    deathTimer: 0,
+
   };
 }
 
@@ -215,11 +223,29 @@ export function step(state: GameState, inputs: [Input, Input]): GameState {
 
   for (let i = 0; i < 2; i++) {
     const p = state.players[i]!;
-    const input = inputs[i]!;
+    const dying = p.hp <= 0 || p.deathTimer > 0;
+    const input = dying ? EMPTY_INPUT : inputs[i]!;
     const other = state.players[1 - i]!;
     const c = CHARACTERS[p.character];
 
+    if (dying) {
+      p.deathTimer++;
+      p.auraTimer = 0;
+      p.dashTimer = 0;
+      p.attackTimer = 0;
+      p.vx *= 0.9;
+      p.vy = Math.min(p.vy + GRAVITY, 18);
+      p.x += p.vx;
+      p.y += p.vy;
+      if (p.y + PLAYER_H > 600) {
+        p.y = 600 - PLAYER_H;
+        p.vy = 0;
+      }
+      continue;
+    }
+
     stepPlayer(p, input, state.tick);
+
 
     if (input.attack && p.attackCd === 0) {
       p.attackCd = c.melee.cooldown;
@@ -301,8 +327,9 @@ export function step(state: GameState, inputs: [Input, Input]): GameState {
     return pr.life > 0 && pr.x > -40 && pr.x < WORLD.width + 40 && pr.y < WORLD.height + 40;
   });
 
-  if (state.players[0].hp <= 0) state.winner = 1;
-  else if (state.players[1].hp <= 0) state.winner = 0;
+  if (state.players[0].deathTimer >= DEATH_DURATION) state.winner = 1;
+  else if (state.players[1].deathTimer >= DEATH_DURATION) state.winner = 0;
+
 
   return state;
 }
