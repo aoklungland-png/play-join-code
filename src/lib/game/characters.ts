@@ -135,7 +135,7 @@ export const CHARACTERS: Record<CharacterId, Character> = {
   jj: {
     id: "jj",
     name: "JJ",
-    tagline: "Sickly and sneaky. Coughs flying acid and blinks a short hop forward.",
+    tagline: "Sickly and sneaky. Hits close range and jiggle-dances a poison cloud around himself.",
     color: "#b184f5",
     accent: "#a4f58a",
     look: {
@@ -149,23 +149,18 @@ export const CHARACTERS: Record<CharacterId, Character> = {
     speed: 4.2,
     jump: 13.5,
     maxHp: 100,
-    melee: {
-      damage: 11,
-      range: 40,
-      cooldown: 34,
-      projectile: { speed: 9.5, life: 90, kind: "acid" },
-    },
+    melee: { damage: 9, range: 54, cooldown: 26 },
     special: {
-      name: "Blink Step",
-      kind: "blink",
-      damage: 0,
-      cooldown: 180,
-      duration: 0,
-      radius: 0,
+      name: "Jiggle Toxin",
+      kind: "aura",
+      damage: 4,
+      cooldown: 150,
+      duration: 110,
+      radius: 96,
       speed: 0,
-      distance: 170,
     },
   },
+
 };
 
 export const CHARACTER_LIST = Object.values(CHARACTERS);
