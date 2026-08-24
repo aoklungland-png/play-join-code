@@ -220,11 +220,29 @@ export function step(state: GameState, inputs: [Input, Input]): GameState {
 
   for (let i = 0; i < 2; i++) {
     const p = state.players[i]!;
-    const input = inputs[i]!;
+    const dying = p.hp <= 0 || p.deathTimer > 0;
+    const input = dying ? EMPTY_INPUT : inputs[i]!;
     const other = state.players[1 - i]!;
     const c = CHARACTERS[p.character];
 
+    if (dying) {
+      p.deathTimer++;
+      p.auraTimer = 0;
+      p.dashTimer = 0;
+      p.attackTimer = 0;
+      p.vx *= 0.9;
+      p.vy = Math.min(p.vy + GRAVITY, 18);
+      p.x += p.vx;
+      p.y += p.vy;
+      if (p.y + PLAYER_H > 600) {
+        p.y = 600 - PLAYER_H;
+        p.vy = 0;
+      }
+      continue;
+    }
+
     stepPlayer(p, input, state.tick);
+
 
     if (input.attack && p.attackCd === 0) {
       p.attackCd = c.melee.cooldown;
