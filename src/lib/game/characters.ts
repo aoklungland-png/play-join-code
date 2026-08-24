@@ -44,7 +44,7 @@ export const CHARACTERS: Record<CharacterId, Character> = {
   jiggly: {
     id: "jiggly",
     name: "Jiggly J",
-    tagline: "Tall ginger. Super jumps, and jiggle-dances a poison cloud around himself.",
+    tagline: "Tall ginger. Super jumps, spits flying acid and blinks a step forward.",
     color: "#7fe07a",
     accent: "#ff8a3d",
     look: {
@@ -58,17 +58,24 @@ export const CHARACTERS: Record<CharacterId, Character> = {
     speed: 3.9,
     jump: 18.5,
     maxHp: 95,
-    melee: { damage: 9, range: 54, cooldown: 26 },
+    melee: {
+      damage: 11,
+      range: 40,
+      cooldown: 34,
+      projectile: { speed: 9.5, life: 90, kind: "acid" },
+    },
     special: {
-      name: "Jiggle Toxin",
-      kind: "aura",
-      damage: 4,
-      cooldown: 150,
-      duration: 110,
-      radius: 96,
+      name: "Blink Step",
+      kind: "blink",
+      damage: 0,
+      cooldown: 180,
+      duration: 0,
+      radius: 0,
       speed: 0,
+      distance: 170,
     },
   },
+
   tobi: {
     id: "tobi",
     name: "Tobi",
