@@ -2,6 +2,9 @@ import { CHARACTERS, type CharacterId } from "./characters";
 
 export const WORLD = { width: 1200, height: 640 };
 export const GRAVITY = 0.6;
+/** Ticks the death animation plays before the match resolves. */
+export const DEATH_DURATION = 80;
+
 
 export interface Input {
   left: boolean;
