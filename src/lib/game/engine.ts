@@ -324,8 +324,9 @@ export function step(state: GameState, inputs: [Input, Input]): GameState {
     return pr.life > 0 && pr.x > -40 && pr.x < WORLD.width + 40 && pr.y < WORLD.height + 40;
   });
 
-  if (state.players[0].hp <= 0) state.winner = 1;
-  else if (state.players[1].hp <= 0) state.winner = 0;
+  if (state.players[0].deathTimer >= DEATH_DURATION) state.winner = 1;
+  else if (state.players[1].deathTimer >= DEATH_DURATION) state.winner = 0;
+
 
   return state;
 }
