@@ -72,25 +72,25 @@ export interface Platform {
 
 export const PLATFORMS: Platform[] = [
   // main ground
-  { x: 0, y: 570, w: WORLD.width, h: 70, kind: "solid" },
-  // acid pools burned into the floor
-  { x: 300, y: 558, w: 110, h: 12, kind: "hazard" },
-  { x: 790, y: 558, w: 110, h: 12, kind: "hazard" },
+  { x: 0, y: 600, w: WORLD.width, h: 40, kind: "solid" },
+  // acid pits burned into both ends of the floor
+  { x: 40, y: 588, w: 150, h: 14, kind: "hazard" },
+  { x: 1010, y: 588, w: 150, h: 14, kind: "hazard" },
   // bounce pads
-  { x: 520, y: 546, w: 70, h: 24, kind: "bounce" },
-  { x: 610, y: 546, w: 70, h: 24, kind: "bounce" },
-  // side ledges
-  { x: 70, y: 430, w: 230, h: 18, kind: "solid" },
-  { x: 900, y: 430, w: 230, h: 18, kind: "solid" },
-  // mid platforms
-  { x: 330, y: 350, w: 180, h: 18, kind: "solid" },
-  { x: 690, y: 350, w: 180, h: 18, kind: "solid" },
-  // moving elevator platforms
-  { x: 160, y: 250, w: 150, h: 16, kind: "solid", move: { range: 260, speed: 0.011, phase: 0 } },
-  { x: 890, y: 250, w: 150, h: 16, kind: "solid", move: { range: 260, speed: 0.011, phase: Math.PI } },
+  { x: 300, y: 574, w: 84, h: 26, kind: "bounce" },
+  { x: 816, y: 574, w: 84, h: 26, kind: "bounce" },
+  // central raised arena
+  { x: 460, y: 470, w: 280, h: 20, kind: "solid" },
+  // floating side islands
+  { x: 90, y: 340, w: 210, h: 18, kind: "solid" },
+  { x: 900, y: 340, w: 210, h: 18, kind: "solid" },
+  // moving lifts
+  { x: 320, y: 250, w: 140, h: 16, kind: "solid", move: { range: 210, speed: 0.012, phase: 0 } },
+  { x: 740, y: 250, w: 140, h: 16, kind: "solid", move: { range: 210, speed: 0.012, phase: Math.PI } },
   // top perch
-  { x: 500, y: 180, w: 200, h: 18, kind: "solid" },
+  { x: 520, y: 150, w: 170, h: 18, kind: "solid" },
 ];
+
 
 /** Platform X offset at a given tick (moving platforms patrol horizontally). */
 export function platformX(p: Platform, tick: number) {
