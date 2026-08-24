@@ -122,6 +122,8 @@ function makePlayer(character: CharacterId, x: number, facing: 1 | -1): PlayerSt
     hurtTimer: 0,
     coughTimer: 0,
     blinkTimer: 0,
+    deathTimer: 0,
+
   };
 }
 
