@@ -38,7 +38,10 @@ export interface PlayerState {
   coughTimer: number;
   /** Blink flash timer */
   blinkTimer: number;
+  /** Counts up while the death animation plays (0 = alive) */
+  deathTimer: number;
 }
+
 
 export interface Projectile {
   owner: 0 | 1;
